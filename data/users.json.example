@@ -1,0 +1,47 @@
+{
+  "users": [
+    {
+      "name": "妈妈",
+      "phone": "+1XXXXXXXXXX",
+      "timezone": "America/Los_Angeles",
+      "age": 63,
+      "preferred_hour": 9,
+      "active": true,
+      "cadence_days": 2,
+      "last_sent_date": null,
+      "last_reply": null,
+      "last_reply_date": null,
+      "exercise_plan": "senior_beginner",
+      "notes": "Seattle. Start with gentle exercises. Focus on planks and light weights."
+    },
+    {
+      "name": "爸爸",
+      "phone": "+1XXXXXXXXXX",
+      "timezone": "America/New_York",
+      "age": 63,
+      "preferred_hour": 9,
+      "active": true,
+      "cadence_days": 2,
+      "last_sent_date": null,
+      "last_reply": null,
+      "last_reply_date": null,
+      "exercise_plan": "senior_beginner",
+      "notes": "New York. Same gentle exercise plan."
+    },
+    {
+      "name": "Alfred",
+      "phone": "+1XXXXXXXXXX",
+      "timezone": "America/Los_Angeles",
+      "age": 40,
+      "preferred_hour": 7,
+      "active": true,
+      "cadence_days": 2,
+      "last_sent_date": null,
+      "last_reply": null,
+      "last_reply_date": null,
+      "exercise_plan": "adult_intermediate",
+      "notes": "Seattle. More challenging routine."
+    }
+  ],
+  "updated_at": "2026-02-22T00:00:00"
+}
