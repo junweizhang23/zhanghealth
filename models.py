@@ -6,7 +6,7 @@ Uses a JSON file as a lightweight data store.
 import json
 import os
 import logging
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 from config import Config
 
@@ -102,7 +102,7 @@ class UserStore:
 
     def save_users(self, users: list[User]):
         """Save all users to the JSON file."""
-        data = {"users": [u.to_dict() for u in users], "updated_at": datetime.utcnow().isoformat()}
+        data = {"users": [u.to_dict() for u in users], "updated_at": datetime.now(timezone.utc).isoformat()}
         with open(self.filepath, "w") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         logger.info(f"Saved {len(users)} users to {self.filepath}")

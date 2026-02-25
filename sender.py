@@ -5,7 +5,7 @@ Handles sending messages and logging delivery status.
 
 import logging
 import os
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 from typing import Optional
 
 import pytz
@@ -178,7 +178,7 @@ class ReminderScheduler:
             return None
 
         body_lower = body.strip().lower()
-        now_str = datetime.utcnow().isoformat()
+        now_str = datetime.now(timezone.utc).isoformat()
 
         # Update last reply info regardless of content
         self.store.update_user(
@@ -204,6 +204,19 @@ class ReminderScheduler:
             logger.info(f"User {user.name} ({from_number}) confirmed exercise completion.")
             return get_ok_acknowledgment(user.name)
 
+        # Try to parse health data from the reply
+        try:
+            from health_tracker import parse_health_data, log_health_data
+            health_data = parse_health_data(body)
+            if health_data:
+                # Map phone to member_id (default to phone-based lookup)
+                member_id = getattr(user, 'member_id', user.name.lower().replace(' ', '_'))
+                response = log_health_data(member_id, from_number, health_data)
+                logger.info(f"Health data recorded for {user.name}: {health_data}")
+                return response
+        except ImportError:
+            pass
+
         # For any other reply, just acknowledge
         logger.info(f"Received message from {user.name}: {body}")
-        return f"收到您的消息：\"{body.strip()}\"\n如有需要，回复 OK 确认完成锻炼，或回复 NO 暂停提醒。"
+        return f"收到您的消息：\"{body.strip()}\"\n如有需要，回复 OK 确认完成锻炼，或回复 NO 暂停提醒。\n\n📊 您也可以发送健康数据：\n  血压: BP 120/80\n  血糖: BS 95\n  体重: W 165\n  心率: HR 72"

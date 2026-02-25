@@ -9,9 +9,9 @@ Flask web server with:
 import logging
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timezone
 
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, abort
 from apscheduler.schedulers.background import BackgroundScheduler
 from apscheduler.triggers.interval import IntervalTrigger
 
@@ -70,7 +70,7 @@ def index():
             "mode": "dry_run" if DRY_RUN else "live",
             "total_users": len(users),
             "active_users": active_count,
-            "server_time_utc": datetime.utcnow().isoformat(),
+            "server_time_utc": datetime.now(timezone.utc).isoformat(),
         }
     )
 
@@ -80,7 +80,21 @@ def twilio_webhook():
     """
     Webhook endpoint for incoming SMS from Twilio.
     Twilio sends a POST request with the message details.
+    Validates Twilio request signature to prevent spoofing.
     """
+    # Validate Twilio request signature (if auth token available)
+    if not DRY_RUN:
+        try:
+            from twilio.request_validator import RequestValidator
+            validator = RequestValidator(Config.TWILIO_AUTH_TOKEN)
+            url = request.url
+            signature = request.headers.get("X-Twilio-Signature", "")
+            if not validator.validate(url, request.form, signature):
+                logger.warning(f"Invalid Twilio signature from {request.remote_addr}")
+                abort(403)
+        except ImportError:
+            pass  # Twilio not installed, skip validation
+
     from_number = request.values.get("From", "")
     body = request.values.get("Body", "")
 
