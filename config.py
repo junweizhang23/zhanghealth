@@ -4,6 +4,7 @@ Loads settings from environment variables (.env file).
 """
 
 import os
+import secrets as _secrets
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -18,7 +19,16 @@ class Config:
     TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER", "")
 
     # Flask
-    FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "dev-secret-key-change-me")
+    FLASK_SECRET_KEY = os.getenv("FLASK_SECRET_KEY", "")
+    if not FLASK_SECRET_KEY:
+        FLASK_SECRET_KEY = _secrets.token_urlsafe(32)
+        import warnings
+        warnings.warn(
+            "FLASK_SECRET_KEY not set! Using auto-generated key. "
+            "Sessions will not persist across restarts. "
+            "Set FLASK_SECRET_KEY in .env for production.",
+            stacklevel=2,
+        )
 
     # Webhook
     WEBHOOK_BASE_URL = os.getenv("WEBHOOK_BASE_URL", "http://localhost:5000")
