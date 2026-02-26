@@ -4,6 +4,7 @@ Flask web server with:
   - Twilio webhook for receiving SMS replies
   - APScheduler for periodic reminder checks
   - Health check endpoint
+  - Admin API with HMAC-based token authentication
 """
 
 import logging
@@ -18,6 +19,7 @@ from apscheduler.triggers.interval import IntervalTrigger
 from config import Config
 from sender import ReminderScheduler
 from models import UserStore
+from admin_auth import require_admin
 
 # ---------------------------------------------------------------------------
 # Logging setup
@@ -116,39 +118,30 @@ def twilio_webhook():
 
 
 @app.route("/api/send-now", methods=["POST"])
+@require_admin
 def send_now():
     """
     Admin endpoint to manually trigger a reminder check.
-    Useful for testing or sending reminders outside the schedule.
+    Requires a valid HMAC-signed admin token in the X-Admin-Token header.
+    Generate a token with: python admin_auth.py generate
     """
-    # Simple auth check (in production, use proper authentication)
-    auth_token = request.headers.get("X-Admin-Token", "")
-    if auth_token != Config.FLASK_SECRET_KEY:
-        return jsonify({"error": "Unauthorized"}), 401
-
     reminder_scheduler.check_and_send_reminders()
     return jsonify({"status": "ok", "message": "Reminder check triggered."})
 
 
 @app.route("/api/users", methods=["GET"])
+@require_admin
 def list_users():
-    """List all users (admin endpoint)."""
-    auth_token = request.headers.get("X-Admin-Token", "")
-    if auth_token != Config.FLASK_SECRET_KEY:
-        return jsonify({"error": "Unauthorized"}), 401
-
+    """List all users (admin endpoint). Requires valid admin token."""
     store = UserStore()
     users = store.load_users()
     return jsonify({"users": [u.to_dict() for u in users]})
 
 
 @app.route("/api/users/<phone>/toggle", methods=["POST"])
+@require_admin
 def toggle_user(phone):
-    """Toggle a user's active status (admin endpoint)."""
-    auth_token = request.headers.get("X-Admin-Token", "")
-    if auth_token != Config.FLASK_SECRET_KEY:
-        return jsonify({"error": "Unauthorized"}), 401
-
+    """Toggle a user's active status (admin endpoint). Requires valid admin token."""
     store = UserStore()
     user = store.get_user_by_phone(phone)
     if not user:

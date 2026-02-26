@@ -1,6 +1,9 @@
 """
 Data models for Zhang Health user management.
 Uses a JSON file as a lightweight data store.
+
+Phone numbers are encrypted at rest when DATA_ENCRYPTION_KEY is configured.
+Backward-compatible: reads both plain-text and encrypted phone numbers.
 """
 
 import json
@@ -9,6 +12,7 @@ import logging
 from datetime import datetime, date, timezone
 from typing import Optional
 from config import Config
+from data_encryption import encrypt_field, decrypt_field, is_encrypted
 
 logger = logging.getLogger(__name__)
 
@@ -32,7 +36,8 @@ class User:
         notes: str = "",
     ):
         self.name = name
-        self.phone = phone  # E.164 format, e.g. "+12065551234"
+        # Decrypt phone on load (handles both encrypted and plain-text)
+        self.phone = decrypt_field(phone)
         self.timezone = timezone  # e.g. "America/Los_Angeles"
         self.age = age
         self.preferred_hour = preferred_hour  # Hour in local time (0-23)
@@ -45,6 +50,7 @@ class User:
         self.notes = notes
 
     def to_dict(self) -> dict:
+        """Serialize to dict. Phone is returned in plain text for API responses."""
         return {
             "name": self.name,
             "phone": self.phone,
@@ -59,6 +65,12 @@ class User:
             "exercise_plan": self.exercise_plan,
             "notes": self.notes,
         }
+
+    def to_storage_dict(self) -> dict:
+        """Serialize to dict for file storage. Phone is encrypted."""
+        d = self.to_dict()
+        d["phone"] = encrypt_field(self.phone)
+        return d
 
     @classmethod
     def from_dict(cls, data: dict) -> "User":
@@ -88,7 +100,7 @@ class UserStore:
         os.makedirs(data_dir, exist_ok=True)
 
     def load_users(self) -> list[User]:
-        """Load all users from the JSON file."""
+        """Load all users from the JSON file. Handles both encrypted and plain-text data."""
         if not os.path.exists(self.filepath):
             logger.warning(f"Users file not found at {self.filepath}. Returning empty list.")
             return []
@@ -101,14 +113,17 @@ class UserStore:
             return []
 
     def save_users(self, users: list[User]):
-        """Save all users to the JSON file."""
-        data = {"users": [u.to_dict() for u in users], "updated_at": datetime.now(timezone.utc).isoformat()}
+        """Save all users to the JSON file. Phone numbers are encrypted at rest."""
+        data = {
+            "users": [u.to_storage_dict() for u in users],
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+        }
         with open(self.filepath, "w") as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
         logger.info(f"Saved {len(users)} users to {self.filepath}")
 
     def get_user_by_phone(self, phone: str) -> Optional[User]:
-        """Find a user by their phone number."""
+        """Find a user by their phone number (compares decrypted values)."""
         users = self.load_users()
         for user in users:
             if user.phone == phone:
@@ -124,7 +139,7 @@ class UserStore:
                     if hasattr(user, key):
                         setattr(user, key, value)
                 self.save_users(users)
-                logger.info(f"Updated user {user.name} ({phone}): {kwargs}")
+                logger.info(f"Updated user {user.name}: {list(kwargs.keys())}")
                 return True
-        logger.warning(f"User with phone {phone} not found for update.")
+        logger.warning(f"User not found for update.")
         return False

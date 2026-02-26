@@ -18,6 +18,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Optional
 
+from data_encryption import encrypt_field, decrypt_field
+
 logger = logging.getLogger(__name__)
 
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -189,7 +191,7 @@ def log_health_data(
     record = {
         "timestamp": now.isoformat(),
         "member_id": member_id,
-        "phone": phone,
+        "phone": encrypt_field(phone),  # Encrypt PII at rest
         **data,
     }
 
@@ -198,7 +200,7 @@ def log_health_data(
     with open(HEALTH_LOG_FILE, "a", encoding="utf-8") as f:
         f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
-    logger.info(f"Health data logged: {record}")
+    logger.info(f"Health data logged for member {member_id}: type={data.get('type')}")
 
     # Log to MemoryStore for cross-agent access
     if HAS_MEMORY and _memory:
@@ -301,6 +303,9 @@ def get_health_summary(member_id: str, days: int = 30) -> str:
                 record = json.loads(line)
                 if record.get("member_id") != member_id:
                     continue
+                # Decrypt phone if needed for display
+                if "phone" in record:
+                    record["phone"] = decrypt_field(record["phone"])
                 ts = datetime.fromisoformat(record["timestamp"])
                 if ts >= cutoff:
                     records.append(record)
