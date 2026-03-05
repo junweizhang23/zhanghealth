@@ -1,35 +1,28 @@
-# Environment variables (NEVER commit secrets)
-.env
-
 # Python
 __pycache__/
-*.py[cod]
-*$py.class
-*.so
+*.pyc
+*.pyo
 *.egg-info/
 dist/
 build/
-eggs/
-*.egg
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+htmlcov/
+coverage.xml
 
-# Virtual environment
-venv/
-.venv/
-env/
+# Environment
+.env
+.env.local
+.env.production
+
+# Runtime data
+data/
+logs/
+output/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-logs/
-*.log
-
-# Data (contains phone numbers - sensitive)
-data/users.json
